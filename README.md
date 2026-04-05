@@ -11,8 +11,8 @@ Furthermore the more advanced data-encryption feature do impose new security ris
 
 In this repository I am going to study and show in a proof-of-concept (PoC) how you maintain your data-sovereignty, while simultaneously leveraging the strenghts of hyperscaler (Azure in the PoC) as much as possible via Open Source tooling. The product will be a API-service that you can deploy and use with your favorite tools and languages.
 
-However, it will take a month or two to mature this repository, as this is a personal project which is unrelated to my daily job, which is need to keep live rolling. `;-)`
+However, it will take a month or two to mature this repository, as this is a personal project which is unrelated to my daily job, which is need to keep live rolling. `:-)`
 
 
-##TO BE CONTINUED shortly
+## TO BE CONTINUED shortly
 ....        
