@@ -1,0 +1,7 @@
+[package]
+name = "sk_client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = "0.13.2"

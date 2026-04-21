@@ -4,6 +4,8 @@ use axum::{
 };
 
 mod handlers;
+mod managed_id;
+mod obfusicate;
 
 // selecting the single-threaded mode, as I want to run this code in an SGX enclave, which also starts of single-threaded. SGX can be multi-threaded but that is not the default
 #[tokio::main(flavor="current_thread")]
