@@ -1,16 +1,28 @@
 use anyhow::Result;
 use base64::{self, prelude::*};
+use std::sync::Mutex;
+
+//pub static MASK: &[u8;8] = b"12345678";
+//pub static MASK: Mutex<Vec<u8>>  = Mutex::new(vec![b'1',b'2',b'3',b'4', b'5', b'6', b'7', b'8']); // b"12345678".as_vec());
+pub static MASK: Mutex<&[u8]>  = Mutex::new(b"12345678");
 
 
-pub static MASK: &[u8;8] = b"12345678";
+pub fn set_obfusication_mask(mask: &'static [u8]) {
+    let mut mask_guard = MASK.lock().unwrap(); //expect("can not get lock on MASK");
 
+    *mask_guard = mask;
+}
 
 /// Takes a key and a value, and returns the modified value as a string (which should be ascii, and probably base64)
-pub fn mask_string(key: &str, value: &str) -> Result<String> {
+pub fn mask_string(_key: &str, value: &str) -> Result<String> {
     //let mut byte_value = string.into_bytes();
     let mut byte_value = BASE64_STANDARD.decode(value)?;
+
+    let mask = MASK.lock().unwrap();
+    let mask_len = mask.len();
+
     // apply the mask to the bytes
-    byte_value.iter_mut().enumerate().for_each(|(idx,v)| { *v = *v ^ MASK[idx % 8]; });
+    byte_value.iter_mut().enumerate().for_each(|(idx,v)| { *v = *v ^ mask[idx % mask_len]; });
 
 
     Ok(BASE64_STANDARD.encode(byte_value))
@@ -19,13 +31,19 @@ pub fn mask_string(key: &str, value: &str) -> Result<String> {
 #[cfg(test)]
 mod test {
 
-use crate::obfusicate::mask_string;
+use crate::obfuscate::{mask_string, set_obfusication_mask};
 use base64::prelude::*;
 
     const KEY: &str = "no_relevant_yet";
 
+    fn init_tests() {
+        set_obfusication_mask(b"12345678");
+    }
+
     #[test]
     fn round_trip_short_string() {
+        // init_tests();
+
         let input = BASE64_STANDARD.encode("Hello");
 
         let masked = mask_string(KEY, &input).unwrap();
@@ -38,6 +56,8 @@ use base64::prelude::*;
 
     #[test]
     fn round_trip_long_string() {
+        // init_tests();
+        
         let input = BASE64_STANDARD.encode("Hello World, here I am again, but this time with a string that exceeds the mask");
 
         let masked = mask_string(KEY, &input).unwrap();
@@ -49,6 +69,8 @@ use base64::prelude::*;
 
     #[test]
     fn check_short_string() {
+        init_tests();
+        
         let input = BASE64_STANDARD.encode("Hello World!");
 
         let masked = mask_string(KEY, &input).unwrap();
