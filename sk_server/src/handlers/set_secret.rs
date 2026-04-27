@@ -1,13 +1,10 @@
-use axum::{
-    body::{self, Bytes}, extract::Path, http::{StatusCode, header::HeaderMap}
-};
-use axum::extract;
 use crate::managed_id::get_secret_client;
 use crate::obfuscate::mask_string;
-use azure_security_keyvault_secrets::{models::SetSecretParameters, ResourceExt};
+use azure_core::http::Response;
+use azure_security_keyvault_secrets::{models::{SetSecretParameters, Secret}, ResourceExt};
 use anyhow::{Result, anyhow, bail};
 
-use serde::Deserialize;
+//use serde::Deserialize;
 
 // // connsider to replace this with the original SetSecretParameters, to get a passthrough
 // #[derive(Deserialize)]
@@ -27,7 +24,7 @@ use serde::Deserialize;
 /// PUT {vaultBaseUrl}/secrets/{secret-name}?api-version=2025-07-01
 /// 
 
-pub async fn set_secret_aux(secret_name: &str, mut body_content: SetSecretParameters) -> Result<()> {
+pub async fn set_secret_aux(secret_name: &str, mut body_content: SetSecretParameters) -> Result<Response<Secret>> {
 
     let client = get_secret_client().await.map_err(|e| anyhow!("failed with error '{e:?}'"))?;
 
@@ -42,39 +39,22 @@ pub async fn set_secret_aux(secret_name: &str, mut body_content: SetSecretParame
     // };
     body_content.value = Some(masked_secret);
 
-    let secret_result = client
+    let raw_result = client
         .set_secret(&secret_name, body_content.try_into()?, None)
-        .await?
-        .into_model()?;
+        .await?;
 
-    println!(
-        "Secret Name: {:?}, Value: {:?}, Version: {:?}",
-        secret_result.resource_id()?.name,
+    {
+        // for printing/debugging only
+        let secret_result = raw_result.into_model()?;
 
-        secret_result.value,
-        secret_result.resource_id()?.version
-    );
+        println!(
+            "result Set_secret ->  Name: {:?}, Value: {:?}, Version: {:?}",
+            secret_result.resource_id()?.name,
 
-    Ok(())
-}
-
-
-
-pub async fn set_secret(Path((key_vault, secret_name)): Path<(String, String)>, headers: HeaderMap, extract::Json(body_content): extract::Json<SetSecretParameters>) -> (StatusCode, HeaderMap) {
-
-    if set_secret_aux(&secret_name, body_content).await.is_ok() {
-        (StatusCode::OK, HeaderMap::new())
-    } else {
-        (StatusCode::BAD_REQUEST, HeaderMap::new())
+            secret_result.value,
+            secret_result.resource_id()?.version
+        );
     }
 
-}
-
-/// Azure get_secret documentation: https://learn.microsoft.com/en-us/rest/api/keyvault/secrets/get-secret/get-secret
-/// Specs:
-/// GET {vaultBaseUrl}/secrets/{secret-name}/{secret-version}?api-version=2025-07-01
-
-pub async fn get_secret(Path((key_vault, secret_name)): Path<(String, String)>, headers: HeaderMap) -> (StatusCode, HeaderMap, Bytes) {
-
-    (StatusCode::INTERNAL_SERVER_ERROR, HeaderMap::new(), Bytes::new())
+    Ok(raw_result)
 }
